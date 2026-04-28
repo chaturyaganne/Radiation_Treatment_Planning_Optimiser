@@ -1,140 +1,197 @@
-# Radiation Treatment Planning via Spectral Regularization
+# 🩺 Radiation Treatment Planning Optimizer
 
-## Overview
-
-This project focuses on **Intensity-Modulated Radiation Therapy (IMRT)** planning using advanced optimization techniques. The goal is to compute optimal beamlet intensities that:
-
-- Deliver sufficient radiation dose to the tumor (PTV)
-- Minimize exposure to surrounding healthy tissues (OARs)
-- Ensure the treatment plan is **clinically deliverable**
-
-We introduce a **computationally efficient alternative to nuclear norm minimization** using:
-
-- Group sparsity (ℓ₂,₁ norm)
-- Frobenius norm regularization
-
-This approach avoids expensive **Singular Value Decomposition (SVD)** while still promoting **low-rank structure** in beamlet intensity maps.
+A unified optimization framework for Radiation Therapy Planning (RTP) combining  
+**Convex Optimization, NSGA-II, and Inverse Optimization** with  
+**Frobenius + Group Sparsity Regularization** for scalability and robustness.
 
 ---
 
-## Key Idea
+## 🚀 Why This Project Matters
 
-Traditional IMRT optimization uses **nuclear norm minimization**:
+Radiation therapy must strike a precise balance:
 
-||W||_* = Σ σᵢ(W)
+- 🎯 Deliver high dose to tumors (PTV)  
+- 🛡️ Protect Organs At Risk (OARs)
 
-However, this is computationally expensive for large datasets due to repeated SVD computations.
+This creates a large-scale, high-dimensional optimization problem with competing clinical objectives.
 
-### Proposed Approach
-
-We replace nuclear norm with a **dual-penalty proxy**:
-
-λ₁ ||W||₂,₁ + λ₂ ||W||_F²
-
-Where:
-- ||W||₂,₁ = sum of ℓ₂ norms of columns of W
-- ||W||_F² = sum of squared entries of W
-
-### Interpretation:
-
-- **Group sparsity (ℓ₂,₁ norm)** → removes unnecessary beamlets (structured sparsity)
-- **Frobenius norm** → smooths intensity distribution and stabilizes solution
-
-Together, they induce **low-rank-like behavior without SVD**
+👉 This project builds a unified framework to compare optimization strategies under the same setting.
 
 ---
 
-## Problem Formulation
+## 🧠 Core Idea
 
-We solve the optimization problem:
+Beamlet Intensities  ──▶  Dose Influence Matrix  ──▶  Voxel Dose
 
-minimize:
-F₁(w) + μ F₂(w) + λ₁ ||W||₂,₁ + λ₂ ||W||_F²
-
-subject to:
-w ≥ 0
-
-Where:
-- F₁(w): Tumor underdose penalty  
-- F₂(w): OAR overdose penalty  
-- W: reshaped beamlet intensity matrix  
+Goal:
+- ✔ Maximize tumor dose  
+- ✔ Minimize organ damage  
+- ✔ Keep plan simple & stable  
 
 ---
 
-## Optimization Frameworks
+## ⚙️ Methods Implemented
 
-### 1. Convex Optimization (SOCP)
-- Implemented using **CVXPY**
-- Guarantees **global optimality**
-- Fast and scalable
+### 🔹 Convex Optimization (Baseline)
+- Linear Programming formulation  
+- Uses slack variables for constraint violations  
+- Provides globally optimal solution  
 
-### 2. NSGA-II (Multi-objective Evolutionary Optimization)
-- Explores trade-offs between competing objectives
-- Produces a **Pareto front of solutions**
-- Computationally expensive but clinically insightful
-
-### 3. Inverse Optimization
-- Recovers objective weights from a reference clinical plan
-- Uses **KKT conditions + QCQP formulation**
-- Captures implicit expert decision-making
+✔ Reliable  
+✔ Efficient  
+✔ Strong baseline  
 
 ---
 
-## Dataset
+### 🔹 NSGA-II (Multi-Objective Optimization)
+- Evolutionary algorithm  
+- Produces a Pareto front of treatment plans  
 
-- **PortPy Lung_Patient_3**
-- ~200,000 voxels  
-- 4,420 beamlets  
-- Sparse dose influence matrix  
+Trade-off:
+More Tumor Coverage  ←── trade-off ──→  More Organ Protection  
 
----
-
-## Results
-
-| Metric | Baseline | Regularized |
-|--------|----------|-------------|
-| Homogeneity Index (HI) | 0.831 | 0.102 |
-| Nuclear Norm | 6547.9 | ~1000 |
-| Monitor Units (MU) | ~40,000 | ~20,000 |
-| Solve Time | ~7 min | <2 min |
+✔ Captures real clinical trade-offs  
+✔ No need to scalarize objectives  
 
 ---
 
-## Key Observations
+### 🔹 Inverse Optimization (Learning Preferences)
+- Learns objective weights from reference plans  
+- Formulated as bi-level optimization  
 
-- Homogeneity Index improved by ~88%
-- Solve time reduced significantly
-- Beam intensity maps became smoother and more structured
-- Plans became significantly more clinically deliverable
+Reference Plan → Learn Weights → Generate Similar Plans  
 
----
-
-## Features
-
-- Convex IMRT optimization using SOCP
-- Spectral regularization without SVD
-- Group sparsity implementation (ℓ₂,₁ norm)
-- DVH (Dose Volume Histogram) analysis
-- Inverse optimization pipeline
-- Lambda (λ) sweep experiments for trade-off analysis
+✔ Personalized planning  
+✔ Reduces manual tuning  
+✔ Combines ML + optimization  
 
 ---
 
-## Clinical Significance
+## 📉 Regularization Strategy
 
-This approach reduces treatment complexity while preserving dose accuracy, enabling:
+### ✔ Frobenius + Group Sparsity (Used in this project)
 
-- Faster treatment planning cycles
-- Reduced MLC motion complexity
-- Improved patient throughput
-- More stable and interpretable fluence maps
+Instead of spectral (nuclear norm) regularization, we use:
+
+- Frobenius norm → controls overall magnitude (smoothness)  
+- Group sparsity (ℓ₂,₁ norm) → enforces structured sparsity across beam groups  
+
+### Why this choice?
+
+🚫 Nuclear norm → high memory + expensive SVD computations  
+✅ Frobenius + Group Sparsity →
+- Scales to large problems  
+- Encourages structured beam selection  
+- Much more computationally efficient  
 
 ---
 
-## Summary
+## 🧩 System Overview
 
-This work demonstrates that **structured convex regularization can effectively replace nuclear norm minimization**, achieving:
+            +----------------------+
+            |  Dose Matrix (A)     |
+            +----------+-----------+
+                       |
+                       v
+    +----------------------------------------+
+    | Optimization Layer                     |
+    |                                        |
+    |  Convex   |  NSGA-II  |  Inverse       |
+    |  Solver   |  Pareto   |  Learning      |
+    +----------------------------------------+
+                       |
+                       v
+            +----------------------+
+            | Optimized Treatment  |
+            | Plan (Beamlets)      |
+            +----------------------+
 
-- High-quality dose distributions
-- Significant computational savings
-- Clinically meaningful deliverability improvements
+---
+
+## 📂 Project Structure
+
+```
+Radiation_Treatment_Planning_Optimiser/
+│
+├── Convex_Optimisation/
+│ ├── Convex_Optimisation.ipynb
+│ ├── graphs/
+│ ├── README.md
+│ └── requirements.txt
+│
+├── NSGA-II/
+│ ├── NSGA-II.ipynb
+│ └── Graphs/
+│
+├── Inverse_Optimisation/
+│ └── Inverse_Optimisation.ipynb
+│
+└── .gitignore
+
+```
+
+---
+
+## ⚙️ Installation
+
+```bash
+git clone https://github.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser.git
+cd Radiation_Treatment_Planning_Optimiser
+pip install -r Convex_Optimisation/requirements.txt
+
+▶️ Run the Project
+
+jupyter notebook Convex_Optimisation/Convex_Optimisation.ipynb
+jupyter notebook NSGA-II/NSGA-II.ipynb
+jupyter notebook Inverse_Optimisation/Inverse_Optimisation.ipynb
+```
+
+## 📊 Outputs
+
+Dose distribution plots
+
+Pareto front visualizations
+
+Beam intensity maps
+
+Plan comparison graphs
+
+
+📁 Located in:
+
+```
+Convex_Optimisation/graphs/
+NSGA-II/Graphs/
+```
+
+## 🔬 Dataset
+
+LINK : https://huggingface.co/datasets/PortPy-Project/PortPy_Dataset
+
+Uses the PortPy benchmark dataset, including:
+
+Dose-influence matrices
+
+Organ masks (HDF5)
+
+Clinical beam configurations
+
+## 👥 Authors
+
+Chaturya Ganne
+
+Dhathri Meda
+
+Mohan Vamsi Varadaraju Priya
+
+## 🏁 Key Takeaways
+
+Convex → optimal baseline
+
+NSGA-II → trade-off exploration
+
+Inverse → learned preferences
+
+Frobenius + Group Sparsity → scalable + structured solutions
+
+
