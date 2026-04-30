@@ -161,6 +161,8 @@ Located in:
 ```
 Convex_Optimisation/graphs/
 NSGA-II/Graphs/
+Inverse_Optimisation/Graphs/
+
 ```
 
 ##  Dataset
