@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Radiation Treatment Planning Dashboard</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -35,6 +33,63 @@ body {
 
 .slider-container {
   margin: 20px 0;
+}
+
+.lambda-buttons {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.lambda-btn {
+  padding: 12px 20px;
+  background: #333;
+  color: #fff;
+  border: 2px solid #4caf50;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.lambda-btn:hover {
+  background: #4caf50;
+  transform: scale(1.05);
+}
+
+.lambda-btn.active {
+  background: #4caf50;
+  color: #000;
+}
+
+.graphs-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.graph-placeholder {
+  background: #222;
+  border: 2px solid #4caf50;
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+}
+
+.graph-placeholder p {
+  margin: 0 0 10px 0;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.placeholder-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
 }
 
 .cards {
@@ -82,25 +137,54 @@ canvas {
   <div class="tab" onclick="switchMethod('inverse')">Inverse</div>
 </div>
 
-<!-- Slider -->
+<!-- Lambda Value Selector -->
 <div class="slider-container">
-  λ (regularization):
-  <input type="range" min="0" max="0.1" step="0.001" value="0" id="lambdaSlider" oninput="updateUI()">
-  <span id="lambdaValue">0</span>
+  <h3>Select λ (regularization) Value:</h3>
+  <div class="lambda-buttons">
+    <button class="lambda-btn active" onclick="selectLambda(0, this)">λ = 0</button>
+    <button class="lambda-btn" onclick="selectLambda(0.001, this)">λ = 0.001</button>
+    <button class="lambda-btn" onclick="selectLambda(0.005, this)">λ = 0.005</button>
+    <button class="lambda-btn" onclick="selectLambda(0.01, this)">λ = 0.01</button>
+    <button class="lambda-btn" onclick="selectLambda(0.1, this)">λ = 0.1</button>
+  </div>
+  <p>Current λ: <span id="lambdaValue">0</span></p>
 </div>
 
 <!-- Metrics -->
 <div class="cards" id="metrics"></div>
 
-<!-- Charts -->
+<!-- DVH Graphs Section -->
 <div class="section">
-  <h3>DVH</h3>
-  <canvas id="dvhChart"></canvas>
+  <h3>DVH Graphs - λ = <span id="dvhLambda">0</span></h3>
+  <div class="graphs-container">
+    <div class="graph-placeholder">
+      <p>Convex Optimization</p>
+      <img id="dvhConvex" src="https://via.placeholder.com/400x300?text=DVH+Convex+λ=0" alt="DVH Convex" class="placeholder-img">
+    </div>
+    <div class="graph-placeholder">
+      <p>NSGA-II</p>
+      <img id="dvhNsga2" src="https://via.placeholder.com/400x300?text=DVH+NSGA2+λ=0" alt="DVH NSGA-II" class="placeholder-img">
+    </div>
+    <div class="graph-placeholder">
+      <p>Inverse</p>
+      <img id="dvhInverse" src="https://via.placeholder.com/400x300?text=DVH+Inverse+λ=0" alt="DVH Inverse" class="placeholder-img">
+    </div>
+  </div>
 </div>
 
+<!-- Comparison Graphs Section -->
 <div class="section">
-  <h3>Tradeoff</h3>
-  <canvas id="tradeoffChart"></canvas>
+  <h3>Comparison Graphs - λ = <span id="compLambda">0</span></h3>
+  <div class="graphs-container">
+    <div class="graph-placeholder">
+      <p>Convex vs NSGA-II</p>
+      <img id="compConvexNsga2" src="https://via.placeholder.com/400x300?text=Comparison+Convex+vs+NSGA2+λ=0" alt="Comparison" class="placeholder-img">
+    </div>
+    <div class="graph-placeholder">
+      <p>Tradeoff Analysis</p>
+      <img id="compTradeoff" src="https://via.placeholder.com/400x300?text=Tradeoff+Analysis+λ=0" alt="Tradeoff" class="placeholder-img">
+    </div>
+  </div>
 </div>
 
 <!-- Table -->
@@ -148,6 +232,59 @@ const data = {
 };
 
 let currentMethod = "convex";
+let currentLambda = 0;
+
+// ============================================================
+// IMAGE URLS MAPPING
+// ============================================================
+// HOW TO USE:
+// These URLs point to images in your GitHub repo:
+// https://github.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser
+//
+// Images used:
+//   - DVH Convex: Convex_Optimisation/graphs/DVH (2).png
+//   - DVH NSGA-II: NSGA-II/Graphs/dvh.png
+//   - DVH Inverse: Convex_Optimisation/graphs/Beamlet_maps (2).png
+//   - Comparison: Convex_Optimisation/graphs/Comparison_bars (1).png
+//   - Tradeoff: NSGA-II/Graphs/pareto_front.png
+//
+const imageUrls = {
+  0: {
+    dvhConvex: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/DVH%20(2).png",
+    dvhNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/dvh.png",
+    dvhInverse: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Beamlet_maps%20(2).png",
+    compConvexNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Comparison_bars%20(1).png",
+    compTradeoff: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/pareto_front.png"
+  },
+  0.001: {
+    dvhConvex: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/DVH%20(2).png",
+    dvhNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/dvh.png",
+    dvhInverse: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Beamlet_maps%20(2).png",
+    compConvexNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Comparison_bars%20(1).png",
+    compTradeoff: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/pareto_front.png"
+  },
+  0.005: {
+    dvhConvex: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/DVH%20(2).png",
+    dvhNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/dvh.png",
+    dvhInverse: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Beamlet_maps%20(2).png",
+    compConvexNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Comparison_bars%20(1).png",
+    compTradeoff: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/pareto_front.png"
+  },
+  0.01: {
+    dvhConvex: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/DVH%20(2).png",
+    dvhNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/dvh.png",
+    dvhInverse: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Beamlet_maps%20(2).png",
+    compConvexNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Comparison_bars%20(1).png",
+    compTradeoff: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/pareto_front.png"
+  },
+  0.1: {
+    dvhConvex: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/DVH%20(2).png",
+    dvhNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/dvh.png",
+    dvhInverse: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Beamlet_maps%20(2).png",
+    compConvexNsga2: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/Convex_Optimisation/graphs/Comparison_bars%20(1).png",
+    compTradeoff: "https://raw.githubusercontent.com/chaturyaganne/Radiation_Treatment_Planning_Optimiser/main/NSGA-II/Graphs/pareto_front.png"
+  }
+};
 
 // -----------------------------
 // SWITCH METHOD
@@ -161,16 +298,42 @@ function switchMethod(method) {
   updateUI();
 }
 
-// -----------------------------
+// ============================================================
+// SELECT LAMBDA VALUE
+// ============================================================
+function selectLambda(lambda, buttonElement) {
+  currentLambda = lambda;
+
+  // Update button styling
+  document.querySelectorAll(".lambda-btn").forEach(btn => btn.classList.remove("active"));
+  buttonElement.classList.add("active");
+
+  updateUI();
+}
+
+// ============================================================
 // UPDATE UI
-// -----------------------------
+// ============================================================
 function updateUI() {
-  const lambda = document.getElementById("lambdaSlider").value;
-  document.getElementById("lambdaValue").innerText = lambda;
+  // Update lambda display
+  document.getElementById("lambdaValue").innerText = currentLambda;
+  document.getElementById("dvhLambda").innerText = currentLambda;
+  document.getElementById("compLambda").innerText = currentLambda;
 
+  // Get image URLs for current lambda
+  const urls = imageUrls[currentLambda] || imageUrls[0];
+
+  // Update DVH graphs
+  document.getElementById("dvhConvex").src = urls.dvhConvex;
+  document.getElementById("dvhNsga2").src = urls.dvhNsga2;
+  document.getElementById("dvhInverse").src = urls.dvhInverse;
+
+  // Update comparison graphs
+  document.getElementById("compConvexNsga2").src = urls.compConvexNsga2;
+  document.getElementById("compTradeoff").src = urls.compTradeoff;
+
+  // Update metrics
   const d = data[currentMethod][0];
-
-  // Metrics
   document.getElementById("metrics").innerHTML = `
     <div class="card">HI<br><b>${d.metrics.HI}</b></div>
     <div class="card">D95<br><b>${d.metrics.D95}</b></div>
@@ -178,41 +341,12 @@ function updateUI() {
     <div class="card">MU<br><b>${d.metrics.MU}</b></div>
   `;
 
-  updateCharts();
   updateTable();
 }
 
-// -----------------------------
-// DVH CHART
-// -----------------------------
-const dvhChart = new Chart(document.getElementById("dvhChart"), {
-  type: 'line',
-  data: {
-    labels: [...Array(100).keys()],
-    datasets: [
-      {label: 'PTV', data: Array(100).fill(100).map((v,i)=>100-i), borderWidth:2},
-      {label: 'Lung', data: Array(100).fill(80).map((v,i)=>80-i), borderWidth:2}
-    ]
-  }
-});
-
-// -----------------------------
-// TRADEOFF CHART
-// -----------------------------
-const tradeoffChart = new Chart(document.getElementById("tradeoffChart"), {
-  type: 'bar',
-  data: {
-    labels: ['0','0.001','0.005','0.01','0.1'],
-    datasets: [
-      {label:'Nuclear Norm', data:[6500,1000,900,800,700]},
-      {label:'MU', data:[2000,1000,950,900,850]}
-    ]
-  }
-});
-
-// -----------------------------
+// ============================================================
 // TABLE
-// -----------------------------
+// ============================================================
 function updateTable() {
   document.getElementById("protocolTable").innerHTML = `
     <table width="100%">
