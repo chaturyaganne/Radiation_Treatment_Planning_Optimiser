@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Radiation Treatment Planning Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0b0b0b;
+  color: #fff;
+  margin: 0;
+  padding: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 10px 20px;
+  background: #222;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.tab.active {
+  background: #4caf50;
+}
+
+.slider-container {
+  margin: 20px 0;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.card {
+  background: #e5e5e5;
+  color: black;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.section {
+  margin-top: 30px;
+}
+
+canvas {
+  background: #fff;
+  border-radius: 10px;
+}
+
+.table {
+  width: 100%;
+  background: #fff;
+  color: black;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Radiation Treatment Planning Optimizer</h2>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchMethod('convex')">Convex</div>
+  <div class="tab" onclick="switchMethod('nsga2')">NSGA-II</div>
+  <div class="tab" onclick="switchMethod('inverse')">Inverse</div>
+</div>
+
+<!-- Slider -->
+<div class="slider-container">
+  λ (regularization):
+  <input type="range" min="0" max="0.1" step="0.001" value="0" id="lambdaSlider" oninput="updateUI()">
+  <span id="lambdaValue">0</span>
+</div>
+
+<!-- Metrics -->
+<div class="cards" id="metrics"></div>
+
+<!-- Charts -->
+<div class="section">
+  <h3>DVH</h3>
+  <canvas id="dvhChart"></canvas>
+</div>
+
+<div class="section">
+  <h3>Tradeoff</h3>
+  <canvas id="tradeoffChart"></canvas>
+</div>
+
+<!-- Table -->
+<div class="section">
+  <h3>Protocol Compliance</h3>
+  <div class="table" id="protocolTable"></div>
+</div>
+
+<script>
+
+// -----------------------------
+// SAMPLE DATA (replace with real JSON later)
+// -----------------------------
+const data = {
+  convex: {
+    0: {
+      metrics: {
+        HI: 0.83,
+        D95: 60.4,
+        hotspot: 110,
+        MU: 40148
+      }
+    }
+  },
+  nsga2: {
+    0: {
+      metrics: {
+        HI: 0.12,
+        D95: 59,
+        hotspot: 65,
+        MU: 30000
+      }
+    }
+  },
+  inverse: {
+    0: {
+      metrics: {
+        HI: 0.2,
+        D95: 58,
+        hotspot: 70,
+        MU: 35000
+      }
+    }
+  }
+};
+
+let currentMethod = "convex";
+
+// -----------------------------
+// SWITCH METHOD
+// -----------------------------
+function switchMethod(method) {
+  currentMethod = method;
+
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+
+  updateUI();
+}
+
+// -----------------------------
+// UPDATE UI
+// -----------------------------
+function updateUI() {
+  const lambda = document.getElementById("lambdaSlider").value;
+  document.getElementById("lambdaValue").innerText = lambda;
+
+  const d = data[currentMethod][0];
+
+  // Metrics
+  document.getElementById("metrics").innerHTML = `
+    <div class="card">HI<br><b>${d.metrics.HI}</b></div>
+    <div class="card">D95<br><b>${d.metrics.D95}</b></div>
+    <div class="card">Hotspot<br><b>${d.metrics.hotspot}</b></div>
+    <div class="card">MU<br><b>${d.metrics.MU}</b></div>
+  `;
+
+  updateCharts();
+  updateTable();
+}
+
+// -----------------------------
+// DVH CHART
+// -----------------------------
+const dvhChart = new Chart(document.getElementById("dvhChart"), {
+  type: 'line',
+  data: {
+    labels: [...Array(100).keys()],
+    datasets: [
+      {label: 'PTV', data: Array(100).fill(100).map((v,i)=>100-i), borderWidth:2},
+      {label: 'Lung', data: Array(100).fill(80).map((v,i)=>80-i), borderWidth:2}
+    ]
+  }
+});
+
+// -----------------------------
+// TRADEOFF CHART
+// -----------------------------
+const tradeoffChart = new Chart(document.getElementById("tradeoffChart"), {
+  type: 'bar',
+  data: {
+    labels: ['0','0.001','0.005','0.01','0.1'],
+    datasets: [
+      {label:'Nuclear Norm', data:[6500,1000,900,800,700]},
+      {label:'MU', data:[2000,1000,950,900,850]}
+    ]
+  }
+});
+
+// -----------------------------
+// TABLE
+// -----------------------------
+function updateTable() {
+  document.getElementById("protocolTable").innerHTML = `
+    <table width="100%">
+      <tr><th>Metric</th><th>Limit</th><th>Value</th></tr>
+      <tr><td>D95</td><td>≥57</td><td>60 ✔</td></tr>
+      <tr><td>Hotspot</td><td>&lt;64</td><td>110 ✖</td></tr>
+    </table>
+  `;
+}
+
+updateUI();
+
+</script>
+
+</body>
+</html>
