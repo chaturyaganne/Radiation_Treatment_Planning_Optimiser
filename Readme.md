@@ -1,4 +1,4 @@
-# 🩺 Radiation Treatment Planning Optimizer
+#  Radiation Treatment Planning Optimizer
 
 A unified optimization framework for Radiation Therapy Planning (RTP) combining  
 **Convex Optimization, NSGA-II, and Inverse Optimization** with  
@@ -6,20 +6,20 @@ A unified optimization framework for Radiation Therapy Planning (RTP) combining
 
 ---
 
-## 🚀 Why This Project Matters
+##  Why This Project Matters
 
 Radiation therapy must strike a precise balance:
 
-- 🎯 Deliver high dose to tumors (PTV)  
-- 🛡️ Protect Organs At Risk (OARs)
+-  Deliver high dose to tumors (PTV)  
+-  Protect Organs At Risk (OARs)
 
 This creates a large-scale, high-dimensional optimization problem with competing clinical objectives.
 
-👉 This project builds a unified framework to compare optimization strategies under the same setting.
+ This project builds a unified framework to compare optimization strategies under the same setting.
 
 ---
 
-## 🧠 Core Idea
+##  Core Idea
 
 Beamlet Intensities  ──▶  Dose Influence Matrix  ──▶  Voxel Dose
 
@@ -30,7 +30,7 @@ Goal:
 
 ---
 
-## ⚙️ Methods Implemented
+##  Methods Implemented
 
 ### 🔹 Convex Optimization (Baseline)
 - Linear Programming formulation  
@@ -67,7 +67,7 @@ Reference Plan → Learn Weights → Generate Similar Plans
 
 ---
 
-## 📉 Regularization Strategy
+##  Regularization Strategy
 
 ### ✔ Frobenius + Group Sparsity (Used in this project)
 
@@ -78,15 +78,15 @@ Instead of spectral (nuclear norm) regularization, we use:
 
 ### Why this choice?
 
-🚫 Nuclear norm → high memory + expensive SVD computations  
-✅ Frobenius + Group Sparsity →
+ Nuclear norm → high memory + expensive SVD computations  
+ Frobenius + Group Sparsity →
 - Scales to large problems  
 - Encourages structured beam selection  
 - Much more computationally efficient  
 
 ---
 
-## 🧩 System Overview
+##  System Overview
 
             +----------------------+
             |  Dose Matrix (A)     |
@@ -108,7 +108,7 @@ Instead of spectral (nuclear norm) regularization, we use:
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 Radiation_Treatment_Planning_Optimiser/
@@ -146,7 +146,7 @@ jupyter notebook NSGA-II/NSGA-II.ipynb
 jupyter notebook Inverse_Optimisation/Inverse_Optimisation.ipynb
 ```
 
-## 📊 Outputs
+##  Outputs
 
 Dose distribution plots
 
@@ -156,15 +156,14 @@ Beam intensity maps
 
 Plan comparison graphs
 
-
-📁 Located in:
+Located in:
 
 ```
 Convex_Optimisation/graphs/
 NSGA-II/Graphs/
 ```
 
-## 🔬 Dataset
+##  Dataset
 
 LINK : https://huggingface.co/datasets/PortPy-Project/PortPy_Dataset
 
@@ -176,7 +175,7 @@ Organ masks (HDF5)
 
 Clinical beam configurations
 
-## 👥 Authors
+## Authors
 
 Chaturya Ganne
 
@@ -184,7 +183,7 @@ Dhathri Meda
 
 Mohan Vamsi Varadaraju Priya
 
-## 🏁 Key Takeaways
+## Key Takeaways
 
 Convex → optimal baseline
 
