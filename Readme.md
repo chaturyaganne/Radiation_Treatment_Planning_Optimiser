@@ -145,6 +145,14 @@ Based on simulations using the PortPy benchmark dataset:
 | MLC Deliverability | ✅ Reduced checkerboard artifacts in beam maps |
 | Pareto Front | ✅ Elbow point identified for clinical trade-off decisions |
 
+## Cost Effectiveness
+
+1. Convex Optimization (The "Budget" Speedster)Cost (Time/Compute): Lowest. It solves in seconds or minutes using highly optimized math (like Interior Point methods).Effectiveness: High, but only if you already know the correct weights ($w_1, w_2$).Verdict: This is the most cost-effective for execution. If you have a standard protocol and just need a plan now, this is your best bet.
+  
+2. NSGA-II (The "Premium" Explorer)Cost (Time/Compute): Highest. It has to run the optimization loop hundreds or thousands of times (for every individual in every generation). It requires significant CPU/GPU power and time.Effectiveness: Maximum Information. It doesn't give you one plan; it gives you the entire Pareto Front.Verdict: This is not cost-effective for daily routine, but it is highly effective for research or "difficult cases" where doctors don't know what the best trade-off is yet.
+
+3. Inverse Optimization (The "Long-term" Investment)Cost (Time/Compute): Medium. There is a high "upfront cost" to train the model on historical plans, but once the weights are learned, it's very fast.Effectiveness: Very High. It eliminates the "human cost" of a physicist sitting at a computer for 3 hours manually tuning weights.Verdict: This is the most cost-effective for a Hospital System. It standardizes quality and saves the most expensive resource: the clinician's time.
+
 ---
 
 ##  Related Work & Literature
