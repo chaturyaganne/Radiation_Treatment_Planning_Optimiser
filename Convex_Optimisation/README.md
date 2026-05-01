@@ -1,288 +1,396 @@
-# Convex Optimisation for IMRT with Spectral Regularisation  
-### Lung_Patient_3 — PortPy Dataset
+#  Convex Optimization for IMRT with Spectral Regularization  
+### Lung_Patient_3 • PortPy Dataset
 
+---
 
 ## Overview
 
-This project implements **Intensity‑Modulated Radiation Therapy (IMRT)** optimisation using **convex programming**.  
-The goal is to compute beamlet intensities that:
+This project builds a **clinically-inspired IMRT treatment planning system** using **convex optimization**, and introduces a **memory-efficient spectral regularization strategy** that:
 
-- Deliver **60 Gy** to the tumour (PTV)  
-- Protect nearby organs (OARs)  
-- Produce **simple, structured, low‑rank fluence patterns**  
-- Avoid the RAM crash caused by true **nuclear norm** optimisation  
+-  Reduces **hotspots** (D05: 110 Gy → ~66 Gy)  
+-  Cuts **nuclear norm by >80%**  
+-  Lowers **total MU ~50%**  
+-  Produces **simpler, sparse, structured beam patterns**  
 
-To achieve this, we introduce a **combined spectral regulariser**:
+ All without using computationally expensive **nuclear norm (SDP)** methods.
 
+---
 
+##  Problem Setting
 
-\[
-R(X) = \lambda \|X\|_F + \lambda \sum_i \|X_{i,:}\|_2
-\]
+In **Intensity-Modulated Radiation Therapy (IMRT)**, we aim to compute beamlet intensities that:
 
+- Deliver **prescribed dose (60 Gy)** to tumor (PTV)  
+- Minimize exposure to **Organs At Risk (OARs)**  
+- Produce **deliverable, smooth, and sparse fluence maps**
 
+Mathematically:
 
-This acts as a **practical surrogate** for nuclear norm regularisation.
+d = A x
+
+- `x` → beamlet intensities  
+- `A` → dose influence matrix  
+- `d` → voxel dose  
+
+---
+
+##  Core Challenge
+
+Standard approaches for structured fluence use:
+
+> **Nuclear Norm Minimization (Low-Rank Constraint)**
+
+But in IMRT:
+-  Requires **semidefinite programming (SDP)**  
+-  Leads to **RAM explosion** (not scalable)
+
+---
+
+##  Key Idea: Spectral Regularization (Efficient Surrogate)
+
+We replace nuclear norm with:
+
+R(X) = λ ||X||_F + λ Σ ||X_i,:||_2
+
+Where `X` is the reshaped beam matrix.
+
+### Why this works:
+
+| Component | Effect |
+|----------|--------|
+| Frobenius norm | Shrinks singular values (global smoothing) |
+| Group sparsity | Removes entire beam directions |
+| Combined | Mimics **low-rank structure** efficiently |
+
+✅ No SDP  
+✅ Scales to real IMRT sizes  
+✅ Retains spectral behavior  
 
 ---
 
 ##  Objectives
 
-1. Maintain tumour coverage (D95 ≥ 60 Gy)  
-2. Reduce hotspots and improve homogeneity  
-3. Keep OAR doses within clinical limits  
-4. Reduce nuclear norm and effective rank of the fluence matrix  
-5. Produce simpler, more deliverable beam patterns  
+The optimization balances:
+
+### Clinical Goals
+- ✅ PTV coverage: **D95 ≥ 60 Gy**  
+- ✅ OAR protection (cord, esophagus, lung)  
+- ✅ Lung mean dose ≤ 20 Gy  
+
+### Structural Goals
+-  Reduce nuclear norm  
+-  Reduce effective rank  
+-  Lower total monitor units (MU)  
+-  Increase sparsity & interpretability  
 
 ---
 
-##  Notebook Structure
+##  Project Structure
+```
+Convex_Optimisation/
+│
+├── Convex_Optimisation.ipynb # Main pipeline
+├── graphs/ # DVH, fluence maps, comparisons
+└── README.md
+```
 
-### **1. Installation & Imports**
-Installs PortPy, CVXPY, solvers, and scientific libraries.
+---
 
-### **2. Clinical Dose Limits**
-Defines protocol constraints:
+##  Pipeline Overview
 
-| Structure | Limit |
-|----------|--------|
-| PTV | ≥ 60 Gy |
-| Esophagus | ≤ 45 Gy |
-| Spinal Cord | ≤ 30 Gy |
-| Lung | Mean ≤ 20 Gy |
-
-These appear in the objective and constraints.
-
-### **3. Dataset Download**
-Downloads **Lung_Patient_3** from HuggingFace, including:
-
-- CT scan  
+### 1. Data Loading
+Using PortPy:
+- CT scans  
 - Structure masks  
-- Dose voxel map  
 - Beam influence matrices  
-- Planner-selected beam angles  
 
-### **4. Dose Influence Matrix (A)**
+Dataset:
+> **Lung_Patient_3**
 
-The IMRT dose model:
+---
 
+### 2. Preprocessing
 
+- Extract voxel masks for:
+  - PTV
+  - Esophagus
+  - Cord
+  - Lung
+- Build structure-specific matrices:
+  - `A_ptv`, `A_esoph`, `A_cord`, `A_lung`
 
-\[
-d = A x
-\]
+---
 
+### 3. Optimization Model
 
+Built using CVXPY
 
-Where:
+#### Decision Variable
+x ∈ R^4420,  x ≥ 0
 
-- **x** = beamlet intensities  
-- **A** = sparse dose influence matrix  
-- **d** = dose delivered to each voxel  
+#### Objective
+- F1 → PTV underdose  
+- F2 → OAR overdose  
+- Regularization → spectral surrogate  
 
-Each beam’s matrix is loaded and horizontally stacked.
+#### Constraint
+mean(A_lung x) ≤ 20
 
-### **5. Structure Masks**
-Extracts voxel indices for:
+---
 
-- PTV  
-- Esophagus  
-- Cord  
-- Lung  
+### 4. Beam Selection
 
-Builds structure-specific matrices:
+- Uses **7 planner-selected beams**
+- Reduces search space → more realistic planning
 
-- `A_ptv`, `A_esoph`, `A_cord`, `A_lung`
+---
 
-### **6. Planner Beam Selection**
-Restricts A to the **7 beams** chosen by the clinical planner.
+### 5. Metrics Computation
 
-Variables:
-
-- `planner_bpb` — beamlets per beam  
-- `nb` — number of beams  
-- `n_beamlets` — total beamlets  
-
-### **7. Convex Optimisation Solver**
-
-#### **Decision variable**
-
-
-\[
-x \in \mathbb{R}^{4420},\quad x \ge 0
-\]
-
-
-
-#### **Objective terms**
-- **F1** — PTV underdose  
-- **F2** — OAR overdose  
-
-#### **Constraint**
-
-
-\[
-\text{mean}(A_{\text{lung}} x) \le 20
-\]
-
-
-
-#### **Combined Spectral Regulariser**
-
-
-\[
-R(X) = \lambda \|X\|_F + \lambda \sum_i \|X_{i,:}\|_2
-\]
-
-
-
-- Frobenius → shrinks all singular values  
-- Group sparsity → removes entire beams  
-- Together → approximates nuclear norm without SDP memory explosion  
-
-### **8. Metrics Computation**
-
-For each plan, computes:
-
-#### **PTV Metrics**
+#### Tumor Metrics
 - D95, D05  
-- Dmean  
 - Homogeneity Index (HI)  
-- Coverage Index (CI proxy)  
+- Mean dose  
 
-#### **OAR Metrics**
-- Dmax esophagus  
-- Dmax cord  
-- Lung mean dose  
-- V20 lung  
+#### OAR Metrics
+- Cord max dose  
+- Esophagus max dose  
+- Lung mean + V20  
 
-#### **Plan Structure Metrics**
+#### Plan Complexity
+- Nuclear norm  
+- Effective rank  
 - Sparsity (%)  
 - Total MU  
-- Nuclear norm  
-- Effective rank  
 
 ---
 
-#  Plot Explanations
+##  Results & Insights
 
-## **1. Dose Volume Histogram (DVH)**
+###  1. Dose Volume Histogram (DVH)
+- Maintains **tumor coverage**
+- Strong reduction in **hotspots**
+- Improved **dose uniformity**
 
-Shows dose distribution for:
+---
 
-- PTV  
-- Esophagus  
-- Cord  
-- Lung  
+###  2. Beamlet Intensity Maps
+- Much **smoother fluence**
+- Clear **beam pruning**
+- Higher **sparsity**
 
-Interpretation:
+---
 
+###  3. Lambda Sweep
+
+| Metric | Trend |
+|------|------|
+| F1 (PTV underdose) | Slight ↑ |
+| F2 (OAR overdose) | Slight ↑ |
+| Nuclear norm | 🔻 Massive drop |
+
+ Trade-off is **controlled and clinically acceptable**
+
+---
+
+###  4. Plan Comparison
+
+| Metric | Improvement |
+|-------|------------|
+| Hotspots (D05) | 🔻 Huge |
+| Homogeneity (HI) | 🔻 Dramatic |
+| Nuclear norm | 🔻 >80% |
+| MU | 🔻 ~50% |
+| Sparsity | 🔺 Significant |
+
+---
+
+##  Key Takeaways
+
+- Nuclear norm optimization is **impractical** for IMRT at scale  
+- Spectral structure **can be approximated efficiently**  
+- Combined regularization gives:
+  - ✔ Low-rank behavior  
+  - ✔ Sparse beams  
+  - ✔ Clinically valid plans  
+
+This is a strong example of:
+**Bridging optimization theory with real-world clinical constraints**
+
+---
+##  Evaluation Metrics & Analysis
+
+The quality of each treatment plan is evaluated using **dosimetric**, **clinical**, and **structural** metrics computed from the optimized beamlet intensities.
+
+---
+
+### Dose Computation
+
+All metrics are derived from the voxel dose:
+
+d = A x
+
+- `x` → optimized beamlet intensities  
+- `A` → dose influence matrix  
+- `d` → dose delivered to each voxel  
+
+---
+
+##  Tumor Coverage Metrics (PTV)
+
+### **D95 (Coverage)**
+- Dose received by 95 percent of tumor volume  
+- Computed as the 5th percentile of tumor voxel doses  
+- Ensures adequate treatment  
+
+✅ Target: ≥ 60 Gy  
+
+---
+
+### **D05 (Hotspot Indicator)**
+- Dose received by top 5 percent of tumor voxels  
+- Computed as the 95th percentile  
+
+ High values indicate hotspots  
+
+---
+
+### **Homogeneity Index (HI)**
+
+HI = (D05 - D95) / D95
+
+- Measures uniformity of dose inside tumor  
+- Lower is better  
+
+| Value | Interpretation |
+|------|--------------|
+| ~0   | Ideal |
+| >0.1 | Poor |
+
+---
+
+##  Organ at Risk (OAR) Metrics
+
+### **Maximum Dose**
+- Highest dose in organ  
+- Protects sensitive structures  
+
+---
+
+### **Mean Dose**
+- Average dose across organ  
+
+---
+
+### **V20 (Lung)**
+- Fraction of lung receiving more than 20 Gy  
+- Indicates radiation spread  
+
+---
+
+## Optimization Objective Metrics
+
+### **F1 — Tumor Underdose**
+- Penalizes tumor voxels receiving less than prescription  
+
+---
+
+### **F2 — OAR Overdose**
+- Penalizes doses exceeding organ limits  
+
+---
+
+##  Plan Complexity Metrics
+
+These are computed from reshaped beam matrix.
+
+---
+
+### **Nuclear Norm**
+- Measures structural complexity  
+- Lower values indicate simpler, more deliverable plans  
+
+---
+
+### **Effective Rank**
+- Number of dominant intensity patterns  
+- Lower → more structured plan  
+
+---
+
+### **Sparsity**
+- Percentage of near-zero beamlets  
+- Higher → fewer active beamlets  
+
+---
+
+### **Total Monitor Units (MU)**
+- Total radiation delivered  
+- Lower → faster and safer delivery  
+
+---
+
+## Visualization Analysis
+
+### **Dose Volume Histogram (DVH)**
+
+- X-axis: Dose (Gy)  
+- Y-axis: Fraction of volume receiving at least that dose  
+
+**Interpretation:**
+- Steep curve → uniform dose  
 - Right shift → higher dose  
 - Left shift → lower dose  
-- Steeper curve → more homogeneous  
-- Vertical lines show clinical limits  
-
-Spectral regularisation:
-
-- Removes hotspots (D05 drops dramatically)  
-- Maintains D95 ≈ 60 Gy  
 
 ---
 
-## **2. Beamlet Intensity Maps**
+### **Beamlet Intensity Maps**
 
-Each row = one plan  
-Each column = one beam  
+- X-axis: Beamlet index  
+- Y-axis: Beam index  
+- Color: Intensity value  
 
-Shows:
-
-- Fluence smoothness  
-- Beam sparsity  
-- Beamlet activation patterns  
-
-Spectral regularisation:
-
-- Increases sparsity  
-- Reduces total MU  
-- Produces smoother, more structured beams  
+**Interpretation:**
+- Smooth patterns → good deliverability  
+- Sparse patterns → fewer active beamlets  
+- Noisy patterns → difficult to deliver  
 
 ---
 
-## **3. Lambda Sweep Plot**
+### **Lambda Sweep**
 
-Three subplots:
+- X-axis: Regularization strength  
+- Y-axis: Metric values  
 
-### **(a) F1 — PTV underdose**
-- Slight increase with λ  
-- Still clinically acceptable  
-
-### **(b) F2 — OAR overdose**
-- Slight increase  
-- Tradeoff for smoother fluence  
-
-### **(c) Nuclear norm**
-- Drops from **6547 → ~1035**  
-- Confirms spectral compression  
-
-This is the key evidence that your combined regulariser works.
+**Observed Trends:**
+- Increasing lambda reduces complexity  
+- Slight increase in dose penalties  
+- Demonstrates tradeoff between accuracy and deliverability  
 
 ---
 
-## **4. Comparison Bar Charts**
+## Key Insight
 
-Two groups:
+The optimization balances:
 
-### **Dose Quality**
-- F1  
-- F2  
-- HI  
-- Lung violation  
+- Tumor coverage  
+- Organ protection  
+- Plan simplicity  
 
-### **Plan Structure**
-- Nuclear norm  
-- Effective rank  
-- Sparsity  
+by solving for beamlet intensities that produce clinically valid and physically deliverable radiation plans.
 
-Shows:
+##  Tech Stack
 
-- Homogeneity improves  
-- Nuclear norm collapses  
-- Sparsity increases  
-- MU decreases  
+- Python  
+- CVXPY  
+- NumPy  
+- Matplotlib  
+- PortPy  
 
 ---
 
-#  Key Variables
+##  How to Run
 
-| Variable | Meaning |
-|---------|---------|
-| `A` | Full dose influence matrix |
-| `A_ptv`, `A_esoph`, `A_cord`, `A_lung` | Structure-specific matrices |
-| `x` | Beamlet intensities |
-| `X_mat` | Reshaped beam matrix |
-| `lam` | Regularisation weight |
-| `reg_type` | `"fro"`, `"group"`, `"both"` |
-| `F1` | PTV underdose |
-| `F2` | OAR overdose |
-| `nuc_norm` | Nuclear norm of X |
-| `eff_rank` | Effective rank |
-| `total_MU` | Total monitor units |
-| `sparsity_%` | Fraction of beamlets ≈ 0 |
-
----
-
-#  Summary
-
-This notebook demonstrates that:
-
-- True nuclear norm optimisation is infeasible due to memory  
-- Combined Frobenius + Group regularisation is an effective **spectral surrogate**  
-- Nuclear norm drops by **>80%**  
-- Hotspots collapse (D05 from 110 Gy → 66 Gy)  
-- Homogeneity improves dramatically (HI from 0.83 → 0.10)  
-- Total MU drops by ~50%  
-- Beam patterns become simpler and more structured  
-
-This provides strong justification for spectral regularisation in IMRT.
-
----
+```bash
+pip install portpy cvxpy numpy matplotlib
+jupyter notebook Convex_Optimisation.ipynb
