@@ -79,7 +79,7 @@ Patient CT + Structures (PortPy)
 - **Mechanism:** Uses slack variables for soft constraint violations
 - **Output:** Single globally optimal beamlet weight vector $w^*$
 
-✅ Reliable &nbsp;&nbsp; ✅ Efficient &nbsp;&nbsp; ✅ Strong baseline
+ Reliable &nbsp;&nbsp;  Efficient &nbsp;&nbsp;  Strong baseline
 
 ---
 
@@ -93,7 +93,7 @@ Patient CT + Structures (PortPy)
 More Tumor Coverage  ◄────── trade-off ──────►  More Organ Protection
 ```
 
-✅ Captures real clinical trade-offs &nbsp;&nbsp; ✅ No objective scalarization needed
+ Captures real clinical trade-offs &nbsp;&nbsp;  No objective scalarization needed
 
 The algorithm identifies the **"elbow point"** — where further tumor coverage leads to exponential increases in organ toxicity — enabling evidence-based clinical decision-making.
 
@@ -109,7 +109,7 @@ The algorithm identifies the **"elbow point"** — where further tumor coverage 
 Reference Plan (x*) → KKT Subgradients → QCQP → Learned Weights → New Plans
 ```
 
-✅ Personalized to institutional planning style &nbsp;&nbsp; ✅ Reduces manual tuning &nbsp;&nbsp; ✅ Bridges ML + optimization
+ Personalized to institutional planning style &nbsp;&nbsp;  Reduces manual tuning &nbsp;&nbsp;  Bridges ML + optimization
 
 ---
 
@@ -119,8 +119,8 @@ Reference Plan (x*) → KKT Subgradients → QCQP → Learned Weights → New Pl
 
 | Approach | Memory | Compute | Beam Structure |
 |---|---|---|---|
-| ❌ Spectral / Nuclear Norm | High | Expensive SVD | Unstructured |
-| ✅ **Frobenius + Group Sparsity** | Low | Efficient | Structured |
+|  Spectral / Nuclear Norm | High | Expensive SVD | Unstructured |
+|  **Frobenius + Group Sparsity** | Low | Efficient | Structured |
 
 ### Our Approach: Frobenius + Group Sparsity ($\ell_{2,1}$)
 
@@ -139,11 +139,11 @@ Based on simulations using the PortPy benchmark dataset:
 
 | Metric | Result |
 |---|---|
-| PTV Coverage (D95) | ✅ 95% of tumor volume reaches prescription dose |
-| OAR Constraints | ✅ Mean dose to Lungs & Heart below TG-101 thresholds |
-| Computation Time | ⚡ ~60% faster than nuclear norm baseline |
-| MLC Deliverability | ✅ Reduced checkerboard artifacts in beam maps |
-| Pareto Front | ✅ Elbow point identified for clinical trade-off decisions |
+| PTV Coverage (D95) |  95% of tumor volume reaches prescription dose |
+| OAR Constraints |  Mean dose to Lungs & Heart below TG-101 thresholds |
+| Computation Time |  ~60% faster than nuclear norm baseline |
+| MLC Deliverability |  Reduced checkerboard artifacts in beam maps |
+| Pareto Front |  Elbow point identified for clinical trade-off decisions |
 
 ## Cost Effectiveness
 
